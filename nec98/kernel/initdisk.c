@@ -42,6 +42,7 @@
 # define is_daua_fd(d)  (((d) & 0x1c) == 0x10)
 # define is_daua_2hd(d) (((d) & 0xfc) == 0x90)
 # define is_daua_2dd(d) (((d) & 0xfc) == 0x70)
+# define is_daua_320k(d)  (((d) & 0xfc) == 0x50)
 extern UWORD FAR SasiSectorBytes[4];  /* very important FAR */
 extern UWORD FAR ScsiSectorBytes[8];  /* very important FAR */
 extern WORD FAR maxsecsize;           /* very important FAR */
@@ -1717,6 +1718,9 @@ STATIC int BIOS_fdtype_nec98(UBYTE daua)
   da = daua & 0xf0;
   ua = daua & 0x0f;
   
+  if (da == 0x50) /* 320K(PC-80S31K) */
+    return 1;
+  
   /* check 1.44M 3mode at first */
   if (da == 0x30 || da == 0x90)
   {
@@ -1746,6 +1750,21 @@ STATIC int BIOS_fdtype_nec98(UBYTE daua)
   return 1;
 }
 
+#ifdef SUPPORT_PC80S31
+static int BIOS_n320kdrives_nec98(int units, UWORD equip)
+{
+  int i;
+  
+  for(i=0; i<4; ++i)
+  {
+    if (equip & (0x10U << i))
+      DauaFDs[units++] = 0x50 + i;
+  }
+  
+  return units;
+}
+#endif
+
 int BIOS_nfdrives_nec98(void)
 {
   UWORD equip;
@@ -1755,6 +1774,10 @@ int BIOS_nfdrives_nec98(void)
   
   equip = peekw(0, 0x55c); /* DISK_EQUIP */
   units = 0;
+#ifdef SUPPORT_PC80S31
+  if (is_daua_320k(BootDaua))
+    units = BIOS_n320kdrives_nec98(units, equip);
+#endif
   for(i=0, n=0; i<4; ++i)
   {
     if (equip & (1U << i))
@@ -1778,6 +1801,10 @@ int BIOS_nfdrives_nec98(void)
   for(i=0; i<4; ++i)
     if (p2[i] != 0)
       DauaFDs[units++] = p2[i];
+#ifdef SUPPORT_PC80S31
+  if (!is_daua_320k(BootDaua))
+    units = BIOS_n320kdrives_nec98(units, equip);
+#endif
   
   return units;
 }
@@ -2263,4 +2290,4 @@ COUNT dsk_init()
 
   return nUnits;
 }
-#endif
+#endif /* !(ALLOW_MBRDISK && ...) */

@@ -230,6 +230,7 @@ static dsk_proc * const dispatch[NENTRY] =
 # define is_daua_144(d) (((d) & 0xfc) == 0x30)
 # define is_daua_IF1M(d) ((((d) & 0x7c) == 0x10) || is_daua_144(d))
 # define is_daua_2dd(d) (((d) & 0xfc) == 0x70)
+# define is_daua_320k(d) (((d) & 0xfc) == 0x50)
 
 STATIC bpb nec98_bpb_1440 = { 512, 1, 1, 2, 0xe0, 2*18*80, 0xf0, 18, 8, 2, 0, 0 };
 STATIC bpb nec98_bpb_2hd = { 1024, 1, 1, 2, 0xc0, 2*8*77, 0xfe, 2, 8, 2, 0, 0 };
@@ -528,6 +529,19 @@ STATIC WORD RWzero_nec98(ddt * pddt, UWORD rwmode)
   daua = pddt->ddt_driveno;
   da = daua & 0xf0;
   ua = daua & 0x0f;
+  
+#ifdef SUPPORT_PC80S31
+  if (da == 0x50)
+  {
+    ret = fl_sense(daua) & 0xff;
+    if (ret < 0x20)
+    {
+      memcpy(pbpbarray, &nec98_bpb_640, sizeof(bpb)); /* dummy */
+      ret = RWzero(pddt, rwmode);
+    }
+    return ret;
+  }
+#endif
   fmodes = fmodes_2hd;
   fmodes = (da == 0x70 || da == 0xf0) ? fmodes_2dd : fmodes_2hd;
   chkdaua[0] = daua;
