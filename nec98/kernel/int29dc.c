@@ -1462,6 +1462,12 @@ VOID ASMCFUNC intdc_main(iregs FAR *r)
           return;
       }
       break;
+
+    default:
+      if (r->CL >= 0xe0 && r->CL <= 0xfd) /* NEC KANJI INPUT FEP API */
+      {
+        return;
+      }
   }
 
 #if 1
