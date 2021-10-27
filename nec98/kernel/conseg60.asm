@@ -387,7 +387,7 @@ nec98_update_curpos_noseg:
 		mov	al, 80
 		mul	byte [_cursor_y]
 		add	al, [_cursor_x]
-		adc	al, 0
+		adc	ah, 0
 		add	ax, ax
 		mov	dx, ax
 		mov	ah, 13h		; locate cursor position
