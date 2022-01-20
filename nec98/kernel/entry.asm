@@ -165,6 +165,7 @@ hex_loop:
                 ret
 
 %ifdef NEC98
+%ifndef UNHANDLED_INT_HANDLER_IN_IOSYS
 print_hex8:     mov cl, 4
                 jmp short hex_loop
 
@@ -203,7 +204,8 @@ reloc_call_unhandled_int_handler:
                 mov si, unhandled_int_message2
 .l2:
                 jmp short zero_message_loop
-%endif
+%endif ; !UNHANDLED_INT_HANDLER_IN_IOSYS
+%endif ; NEC98
 
 divide_by_zero_message db 0dh,0ah,'Interrupt divide by zero, stack:',0dh,0ah,0
 
@@ -266,6 +268,7 @@ stack_loop:
 thats_it:       hlt
                 jmp short thats_it  ; it might be command.com that nukes
 
+%ifndef INT6_HANDLER_IN_IOSYS
 invalid_opcode_message db 0dh,0ah,'Invalid Opcode at ',0
 
                 global reloc_call_int6_handler
@@ -328,6 +331,7 @@ reloc_call_int6_handler:
 %endif
                 mov si,invalid_opcode_message
                 jmp zero_message_loop        
+%endif ; !INT6_HANDLER_IN_IOSYS
 
 %ifdef IBMPC
                 global reloc_call_int19_handler

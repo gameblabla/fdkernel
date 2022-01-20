@@ -275,7 +275,9 @@ STATIC void setup_int_vectors(void)
       { 0x0, FP_OFF(int0_handler) },   /* zero divide */
       { 0x1, FP_OFF(empty_handler) },  /* single step */
       { 0x3, FP_OFF(empty_handler) },  /* debug breakpoint */
+#if !defined(NEC98)
       { 0x6, FP_OFF(int6_handler) },   /* invalid opcode */
+#endif
 #if defined(IBMPC)
       { 0x19, FP_OFF(int19_handler) },
 #endif
@@ -319,6 +321,8 @@ STATIC void setup_int_vectors(void)
   pokel(0, 0x30 * 4 + 1, (ULONG)cpm_entry);
 
 #if defined(NEC98)
+  setvec(0x05, int5_handler);   /* pressing COPY key */
+  setvec(0x06, int6_handler);   /* pressing STOP key (or invalid opcode) */
 #elif defined(IBMPC)
   /* these two are in the device driver area LOWTEXT (0x70) */
   setvec(0x1b, got_cbreak);

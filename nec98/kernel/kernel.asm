@@ -326,9 +326,162 @@ int29_stack_bottom:
                 times 16 db 'Stack for intDC.'          ; 16x16 = 256bytes
 intdc_stack_bottom:
 %endif
-%if 1  ; UNHANDLED_INT_HANDLER_IN_IOSYS
+
+con_putmsg:
+                mov al, [cs: si]
+                cmp al, 0
+                je .brk
+                int 29h
+                inc si
+                jmp short con_putmsg
+.brk:
+                ret
+
+con_puthex8:
+                mov cl, 4
+                jmp short con_puthexlp
+con_puthex16:   ; from print_hex in entry.asm
+                mov cl, 12
+con_puthexlp:
+                mov ax, dx
+                shr ax, cl
+                and al, 0fh
+                cmp al, 10
+                sbb al, 69h
+                das
+                int 29h
+                sub cl, 4
+                jae con_puthexlp
+                ret
+
+
+
+%ifdef INT6_HANDLER_IN_IOSYS
+;----------------------------------------------
+                extern _nec98_flush_bios_keybuf
+                global _int6_handler
+_int6_handler:
+                ; check whether STOP key is pressed(invoked by keyboard handler)
+                push bp
+                mov bp, sp
+                push bx
+                push ds
+                lds bx, [bp + 2]          ; fetch return address
+                cmp word [bx - 2], 06cdh  ; called with "int 06h"?
+                jne .really_invalid_op
+                ; STOP key handler (invoked by keyboard handler)
+                ; when STOP key is pressed:
+                ;  - retract heads of all HDD (SASI/SCSI)
+                ;  - reset color of output character
+                ;  - flush keybuff and send Ctrl-C to console
+                ; or SHIFT + STOP is pressed:
+                ;  - reset color of output character
+                ;  - flush keybuff and send Ctrl-S to console
+                push es
+                xor bx, bx
+                mov es, bx
+                mov bl, 60h
+                mov ds, bx
+                cmp byte [_in_processing_stopkey], 0
+                jne .press_stop_exit_injob
+                mov byte [_in_processing_stopkey], 1
+                mov bl, 13h
+                test byte [es:053ah], 1               ; shift key pressed?
+                jnz .press_stop_l2
+                mov byte [_fd98_retract_hd_pending], 1
+                push ax
+                mov al, [_clear_attr]
+                mov [_put_attr], al
+                mov ax, 1101h
+                mov [_cursor_view], al
+                int 18h
+                ; call _update_cursor_view
+                pop ax
+                mov bl, 03h
+  .press_stop_l2:
+                call far _nec98_flush_bios_keybuf
+                mov byte [00c0h], bl                  ; push Ctrl-C/Ctrl-S to conin_buf
+                mov byte [0103h], 1
+                mov word [0104h], 00c0h
+  .press_stop_exit:
+                mov byte [_in_processing_stopkey], 0
+  .press_stop_exit_injob:
+                pop es
+                pop ds
+                pop bx
+                pop bp
+                iret
+  .really_invalid_op:
+                pop ds
+                pop bx
+                pop bp
+                mov si, iosys_invalid_opcode_message
+con_put_and_dump:
+                call con_putmsg
+
+                mov bp, sp
+                xor si, si      ; print 13 words of stack for debugging LUDIV etc.
+.putstk:
+                mov dx, [bp+si]
+                call con_puthex16
+                mov al, ' '
+                int 29h
+                inc si
+                inc si
+                cmp si, byte 13*2
+                jb .putstk
+                mov al, 0dh
+                int 29h
+                mov al, 0ah
+                int 29h
+                mov ax,04c7fh       ; terminate with errorlevel 127
+                int 21h
+                sti
+.sys_halt:
+                hlt
+                jmp short .sys_halt ; it might be command.com that nukes
+
+iosys_invalid_opcode_message db 0dh,0ah,'Invalid Opcode at ',0
+
+%endif ; INT6_HANDLER_IN_IOSYS
+;----------------------------------------------
+
+                align 2
+
+                global _int5_handler
+_int5_handler:
+                iret
+                align 2
+
                 global _unhandled_int_handler_iosys
 _unhandled_int_handler_iosys:
+%ifdef UNHANDLED_INT_HANDLER_IN_IOSYS
+                mov si, .msg1
+                call con_putmsg
+                push bp
+                mov bp, sp
+                push ds
+                lds si, [bp + 2]
+                mov dx, [si - 2]
+                pop ds
+                pop bp
+                mov si, .msgv
+                cmp dl, 0cdh		; int xxh?
+                jne .l2
+                xchg dl, dh
+                call con_puthex8
+                mov si, .msg2
+.l2:
+                jmp short con_put_and_dump
+.msg1:
+                db 0dh,0ah
+                db 'PANIC - Unhandled INT ', 0
+.msgv:
+                db '??'
+.msg2:
+                db 'h. Stack:', 0dh, 0ah, 0
+
+%else
                 jmp far _unhandled_int_handler
 %endif
 
@@ -1317,10 +1470,12 @@ _int27_handler: jmp 0:reloc_call_int27_handler
 _int0_handler:  jmp 0:reloc_call_int0_handler
                 call near forceEnableA20
 
+%ifndef INT6_HANDLER_IN_IOSYS
                 global  _int6_handler
                 extern  reloc_call_int6_handler
 _int6_handler:  jmp 0:reloc_call_int6_handler
                 call near forceEnableA20
+%endif
 
 %ifdef IBMPC
                 global  _int19_handler
@@ -1366,7 +1521,7 @@ _int29_handler: jmp 0:reloc_call_int29_handler
                 extern  reloc_call_intdc_handler
 _intdc_handler: jmp 0:reloc_call_intdc_handler
                 call near forceEnableA20
- %if 1
+ %ifndef UNHANDLED_INT_HANDLER_IN_IOSYS
                 global  _unhandled_int_handler
                 extern  reloc_call_unhandled_int_handler
 _unhandled_int_handler: jmp 0:reloc_call_unhandled_int_handler
