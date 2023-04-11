@@ -37,15 +37,6 @@ static BYTE *mainRcsId =
     "$Id: main.c 1699 2012-01-16 20:45:44Z perditionc $";
 #endif
 
-static char copyright[] =
-    "(C) Copyright 1995-2012 Pasquale J. Villani and The FreeDOS Project.\n"
-#if defined(NEC98)
-    "(C) Copyright 2001-2021 FreeDOS(98) porting project.\n"
-#endif
-    "All Rights Reserved. This is free software and comes with ABSOLUTELY NO\n"
-    "WARRANTY; you can redistribute it and/or modify it under the terms of the\n"
-    "GNU General Public License as published by the Free Software Foundation;\n"
-    "either version 2, or (at your option) any later version.\n";
 
 struct _KernelConfig InitKernelConfig BSS_INIT({0});
 
@@ -53,7 +44,6 @@ STATIC VOID InitIO(void);
 
 STATIC VOID update_dcb(struct dhdr FAR *);
 STATIC VOID init_kernel(VOID);
-STATIC VOID signon(VOID);
 STATIC VOID kernel(VOID);
 STATIC VOID FsConfig(VOID);
 STATIC VOID InitPrinters(VOID);
@@ -134,11 +124,6 @@ VOID ASMCFUNC FreeDOSmain(void)
 
 #if !defined(NEC98)
   CheckContinueBootFromHarddisk();
-#endif
-
-#if !defined(NEC98)
-  /* display copyright info and kernel emulation status */
-  signon();
 #endif
 
   /* initialize all internal variables, process CONFIG.SYS, load drivers, etc */
@@ -351,7 +336,6 @@ STATIC void init_kernel(void)
   lpTop = MK_FP(FP_SEG(lpTop) - 0xfff, 0xfff0);
 
 #if defined(NEC98)
-  signon();
   InitPC98();
 #endif
 
@@ -468,41 +452,6 @@ STATIC VOID FsConfig(VOID)
   /* init_call_init_buffers(); done from CONFIG.C   */
 }
 
-STATIC VOID signon()
-{
-  printf("\r%S"
-         "Kernel compatibility %d.%d - "
-#if defined(__BORLANDC__)
-  "BORLANDC"
-#elif defined(__TURBOC__)
-  "TURBOC"
-#elif defined(_MSC_VER)
-  "MSC"
-#elif defined(__WATCOMC__)
-  "WATCOMC"
-#elif defined(__GNUC__)
-  "GNUC" /* this is hypothetical only */
-#else
-#error Unknown compiler
-  generate some bullshit error here, as the compiler should be known
-#endif
-#if defined (I386)
-    " - 80386 CPU required"
-#elif defined (I186)
-# if defined(NEC98)
-    " - 80186 or V30 CPU required"
-# else
-    " - 80186 CPU required"
-# endif
-#endif
-
-#ifdef WITHFAT32
-  " - FAT32 support"
-#endif
-  "\n\n%s",
-         MK_FP(FP_SEG(LoL), FP_OFF(LoL->os_release)),
-         MAJOR_RELEASE, MINOR_RELEASE, copyright);
-}
 
 STATIC void kernel()
 {

@@ -1161,39 +1161,14 @@ UWORD GetBiosKey(int timeout)
 #error need platform specific BiosGetKey()
 #endif
 
-STATIC BOOL SkipLine_first(int check_shift)
+STATIC BOOL SkipLine_first()
 {
-  short key;
 
-  if (InitKernelConfig.SkipConfigSeconds > 0)
-    printf("Press F8 to trace or F5 to skip CONFIG.SYS/AUTOEXEC.BAT");
-
-  key = GetBiosKey2(InitKernelConfig.SkipConfigSeconds, check_shift);       /* wait 2 seconds */
-
-  if (key == VK_F5)          /* F5 */
-  {
-    SkipAllConfig = TRUE;
-  }
-  else if (key == VK_F8)     /* F8 */
-  {
-    singleStep = TRUE;
-  }
-
-  printf("\r%79s\r", "");     /* clear line */
-
-  if (SkipAllConfig)
-  {
-    STATIC BYTE disped_bypass = 0;
-    if (!disped_bypass)
-    {
-      disped_bypass = 1;
-      printf("Skipping CONFIG.SYS/AUTOEXEC.BAT\n");
-    }
-  }
-
-  InitKernelConfig.SkipConfigSeconds = -1;
-
-  return SkipAllConfig;
+  /*if (InitKernelConfig.SkipConfigSeconds > 0)
+    printf("Press F8 to trace or F5 to skip CONFIG.SYS/AUTOEXEC.BAT");*/
+	InitKernelConfig.SkipConfigSeconds = 0;
+	SkipAllConfig = FALSE;
+	return SkipAllConfig;
 }
 
 STATIC BOOL SkipLine(char *pLine)
@@ -1205,7 +1180,7 @@ STATIC BOOL SkipLine(char *pLine)
   {
 
 #if 1
-    SkipLine_first(0);
+    SkipLine_first();
 #else
     if (InitKernelConfig.SkipConfigSeconds > 0)
       printf("Press F8 to trace or F5 to skip CONFIG.SYS/AUTOEXEC.BAT");

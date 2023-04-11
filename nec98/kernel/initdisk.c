@@ -2003,7 +2003,7 @@ STATIC COUNT make_floppy_ddts(ddt *pddt, COUNT unit_index, COUNT units)
       da = daua & 0xf0;
       ua = daua & 0x0f;
       fd_type = BIOS_fdtype_nec98(daua);
-      if (InitKernelConfig.InitDiskShowDriveAssignment)
+      /*if (InitKernelConfig.InitDiskShowDriveAssignment)
       {
         printf("\r%c: FD%u ", 'A' + nUnits, nFDUnits);
         switch(da)
@@ -2020,7 +2020,7 @@ STATIC COUNT make_floppy_ddts(ddt *pddt, COUNT unit_index, COUNT units)
           case 3: printf(" (1.44M/2HD/2DD)"); break;
         }
         printf("\n");
-      }
+      }*/
       make_ddt(pddt, nUnits, daua, 0);
       /* store DA/UA list in internal work area */
       if (nUnits < 16)
